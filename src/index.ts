@@ -1,36 +1,44 @@
 import { City } from './city';
 
-//config
-const SCALE = 4; //pixels per block
-const SPEED = 100; //(max) turns per second
+// Config
+const SCALE = 5; // Pixels per block.
+const SPEED = 100; // Max turns per second.
 
 class ZombieSimulation {
-    private canvasContext:CanvasRenderingContext2D;
-    private timerId:number;
-    private size:{ width:number, height:number };
-    private city:City;
-    private mapChoice:string = '1';
+    private canvasContext: CanvasRenderingContext2D;
+    private timerId: number = 0;
+    private size: { width: number; height: number };
+    private city: City | null = null;
+    private mapChoice: string = '1';
 
-    constructor(private canvas:HTMLCanvasElement) {
-        //connect it to the html   
-        this.canvasContext = canvas.getContext('2d') as CanvasRenderingContext2D;
+    constructor(private canvas: HTMLCanvasElement) {
+        // Connect it to the html.
+        this.canvasContext = canvas.getContext(
+            '2d'
+        ) as CanvasRenderingContext2D;
         this.canvasContext.scale(SCALE, SCALE); //scaling done through context
-        this.size = {width: Math.floor(canvas.width/SCALE), height: Math.floor(canvas.height/SCALE)};
+        this.size = {
+            width: Math.floor(canvas.width / SCALE),
+            height: Math.floor(canvas.height / SCALE)
+        };
 
         this.reset();
     }
 
-    setMapChoice(choice:string) {
+    setMapChoice(choice: string) {
         this.mapChoice = choice;
     }
 
     reset() {
-        //initialize
+        // Initialize
         this.city = new City(this.size.width, this.size.height, this.mapChoice);
         this.city.render(this.canvasContext);
     }
 
     step() {
+        if (!this.city) {
+            return;
+        }
         this.city.moveAll();
         this.city.render(this.canvasContext);
     }
@@ -45,20 +53,25 @@ class ZombieSimulation {
     }
 }
 
-//instantiate the sim / connect to HTML
+// Instantiate the simulator and connect to HTML.
 const canvas = $('#canvas')[0] as HTMLCanvasElement;
-const sim:ZombieSimulation = new ZombieSimulation(canvas);
+const sim: ZombieSimulation = new ZombieSimulation(canvas);
 
-//connect the control buttons
+// Connect the control buttons.
 const startButton = $('#startButton').click(() => sim.start());
 const pauseButton = $('#pauseButton').click(() => sim.pause());
 const resetButton = $('#resetButton').click(() => sim.reset());
 const stepButton = $('#stepButton').click(() => sim.step());
-const mapSelect = $('#mapSelect').change((e) => {
+const mapSelect = $('#mapSelect').change(e => {
     let val = $(e.target).val();
     sim.setMapChoice(val as string);
     sim.reset();
 });
 
-//debugging coordinates
-$('#canvas').click((e) => console.log(Math.floor(e.offsetX as number / SCALE), Math.floor(e.offsetY as number / SCALE)));
+// Debugging coordinates.
+$('#canvas').click(e =>
+    console.log(
+        Math.floor((e.offsetX as number) / SCALE),
+        Math.floor((e.offsetY as number) / SCALE)
+    )
+);

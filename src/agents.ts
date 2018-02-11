@@ -4,79 +4,84 @@ import { Point, Facing } from './util';
 // import * as lodash from 'lodash';
 // import * as seedrandom from 'seedrandom'; //seeded random numbers
 // seedrandom('1', {global:true}); //seed the random value
-// _ = lodash.runInContext(); //load with global seed    
+// _ = lodash.runInContext(); //load with global seed
 
 export abstract class Agent {
-    constructor(public location:Point, public facing:Point = Facing.South) { }
+    constructor(public location: Point, public facing: Point = Facing.South) {}
 
-    //Moves the agent, letting them know if they are blocked in current facing
-    //Returns new location (for convenience)
-    abstract move(facingBlocked:boolean):Point;
+    // Moves the agent, letting them know if they are blocked in current facing.
+    // Returns new location (for convenience).
+    abstract move(facingBlocked: boolean): Point;
 
-    //Reacts to other agent (or lackthereof) it sees
-    //Returns the updated self (for convenience/transforming)
-    see(target:Agent|null):Agent {
-        return this; //no modification (default)
-    };
-
-    //Interacts with (modifies) other agent
-    //Returns the modified other (for convenience/transforming)
-    interactWith(target:Agent):Agent {
-        return target; //no modification (default)
+    // Reacts to other agent (or lackthereof) it sees.
+    // Returns the updated self (for convenience/transforming).
+    see(target: Agent | null): Agent {
+        return this; // No modification (default)
     }
 
-    abstract render(context:CanvasRenderingContext2D):void;
+    // Interacts with (modifies) other agent.
+    // Returns the modified other (for convenience/transforming).
+    interactWith(target: Agent): Agent {
+        return target; // No modification (default).
+    }
+
+    abstract render(context: CanvasRenderingContext2D): void;
 }
 
 export class Human extends Agent {
-    protected speed:number = .5; //chance to move (percentage)
+    protected speed: number = 0.5; // Chance to move (percentage)
 
-    move(facingBlocked:boolean = false) {
-        if (_.random(1.0) > this.speed) return this.location; //don't move
+    move(facingBlocked: boolean = false) {
+        if (_.random(1.0) > this.speed) return this.location; // Don't move.
 
         if (!facingBlocked) {
             this.location.x += this.facing.x;
             this.location.y += this.facing.y;
-        }
-        else {
-            this.facing = Facing.Directions[_.random(0, Facing.Directions.length - 1)];
+        } else {
+            this.facing =
+                Facing.Directions[_.random(0, Facing.Directions.length - 1)];
         }
 
         return this.location;
     }
 
-    //runs away from zombies
-    see(target:Agent|null):Agent {
+    // Runs away from zombies.
+    see(target: Agent | null): Agent {
         if (target instanceof Zombie) {
-            //panic and turn around
-            return new PanickedHuman(this.location, new Point(-1 * this.facing.x, -1 * this.facing.y))
-        }
-        else if (target instanceof PanickedHuman) {
-            //panic without turning
+            // Panic and turn around.
+            return new PanickedHuman(
+                this.location,
+                new Point(-1 * this.facing.x, -1 * this.facing.y)
+            );
+        } else if (target instanceof PanickedHuman) {
+            // Panic without turning.
             return new PanickedHuman(this.location, this.facing);
-        }
-        else {
-            if (_.random(1.0) < 0.15) //chance to turn anyway
-                this.facing = Facing.Directions[_.random(0, Facing.Directions.length - 1)];
+        } else {
+            if (_.random(1.0) < 0.15)
+                // Chance to turn anyway.
+                this.facing =
+                    Facing.Directions[
+                        _.random(0, Facing.Directions.length - 1)
+                    ];
         }
         return this;
-    };
+    }
 
-    render(context:CanvasRenderingContext2D) {
-        context.fillStyle = "#F9A7B0" //pink
+    render(context: CanvasRenderingContext2D) {
+        context.fillStyle = '#F9A7B0'; //pink
         context.fillRect(this.location.x, this.location.y, 1, 1);
     }
 }
 
 export class PanickedHuman extends Human {
-    private fearLevel:number = 10;
+    private fearLevel: number = 10;
 
-    constructor(public location:Point, public facing:Point = Facing.South) {
+    constructor(public location: Point, public facing: Point = Facing.South) {
         super(location, facing);
-        this.speed = 1.0; //always move
+        this.speed = 1.0; // Always move
     }
 
-    see(target:Agent|null):Agent {
+    see(target: Agent | null): Agent {
         if (this.fearLevel > 0) {
             this.fearLevel--;
         }
@@ -90,56 +95,56 @@ export class PanickedHuman extends Human {
         }
 
         return this;
-    };
+    }
 
-    render(context:CanvasRenderingContext2D) {
-        context.fillStyle = "#FFF380" //yellow
+    render(context: CanvasRenderingContext2D) {
+        context.fillStyle = '#FFF380'; // Yellow
         context.fillRect(this.location.x, this.location.y, 1, 1);
     }
 }
 
 export class Zombie extends Agent {
     private timePursuing = 0;
-    private speed:number = .2; //chance to move
+    private speed: number = 0.2; // Chance to move
 
-    move(facingBlocked:boolean = false) {
-        if (_.random(1.0) > this.speed) return this.location; //don't move  
+    move(facingBlocked: boolean = false) {
+        if (_.random(1.0) > this.speed) return this.location; // Don't move.
 
         if (!facingBlocked) {
             this.location.x += this.facing.x;
             this.location.y += this.facing.y;
-        }
-        else {
-            this.facing = Facing.Directions[_.random(0, Facing.Directions.length - 1)];
+        } else {
+            this.facing =
+                Facing.Directions[_.random(0, Facing.Directions.length - 1)];
         }
 
         return this.location;
     }
 
-    //chases humans!
-    see(target:Agent|null):Agent {
-        if (this.timePursuing > 0)
-            this.timePursuing--;
+    // Chases humans!
+    see(target: Agent | null): Agent {
+        if (this.timePursuing > 0) this.timePursuing--;
 
         if (target instanceof Human) {
-            this.timePursuing = 10; //start chasing
-        }
-        else if (this.timePursuing === 0 && !target) { //if don't see anything, wander
-            this.facing = Facing.Directions[_.random(0, Facing.Directions.length - 1)];
+            this.timePursuing = 10; // Start chasing.
+        } else if (this.timePursuing === 0 && !target) {
+            // If don't see anything, it wanders again.
+            this.facing =
+                Facing.Directions[_.random(0, Facing.Directions.length - 1)];
         }
         return this;
     }
 
-    //bites humans!
-    interactWith(target:Agent):Agent {
+    // Bites humans!
+    interactWith(target: Agent): Agent {
         if (target instanceof Human) {
             return new Zombie(target.location, target.facing);
         }
         return target;
     }
 
-    render(context:CanvasRenderingContext2D) {
-        context.fillStyle = "#0f0" //green
+    render(context: CanvasRenderingContext2D) {
+        context.fillStyle = '#0f0'; // Green.
         context.fillRect(this.location.x, this.location.y, 1, 1);
     }
 }
