@@ -3,6 +3,7 @@ import { Point, Facing, Colors, Config } from './util';
 import Agent from './agents/agent';
 import Human from './agents/human';
 import Zombie from './agents/zombie';
+import AgentFactory, { AgentType } from './agents/agent-factory';
 
 import * as lodash from 'lodash';
 
@@ -117,10 +118,12 @@ export class City {
             this.width * this.height * Config.populationPercentage
         );
 
+        const agentFactory = new AgentFactory();
+
         _.sampleSize(possiblePlaces, numHumans + 1).forEach((placeObj, idx) => {
-            let newAgent;
-            if (idx < numHumans) newAgent = new Human(placeObj.loc);
-            else newAgent = new Zombie(placeObj.loc); // Last person is a zombie!
+            const agentType =
+                idx < numHumans ? AgentType.HUMAN : AgentType.ZOMBIE;
+            const newAgent = agentFactory.createAgent(agentType, placeObj.loc);
 
             if (placeObj.building) {
                 placeObj.building.addAgent(newAgent);
