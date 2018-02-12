@@ -4,7 +4,7 @@ import { Point, Facing } from './../util';
 
 class Zombie extends Agent {
     private timePursuing = 0;
-    private speed: number = 0.2; // Chance to move
+    speed: number = 0.2; // Chance to move.
 
     move(facingBlocked: boolean = false) {
         if (_.random(1.0) > this.speed) return this.location; // Don't move.

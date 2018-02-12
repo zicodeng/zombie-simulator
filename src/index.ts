@@ -1,7 +1,7 @@
 import { City } from './city';
 
 // Config
-const SCALE = 5; // Pixels per block.
+const SCALE = 4; // Pixels per block.
 const SPEED = 100; // Max turns per second.
 
 class ZombieSimulation {

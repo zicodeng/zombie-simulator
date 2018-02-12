@@ -1,10 +1,11 @@
 import { Point, Facing } from './../util';
+import { HumanState } from './human-states';
 
 /** un-comment below to enable deterministic random for testing **/
-// import * as lodash from 'lodash';
-// import * as seedrandom from 'seedrandom'; //seeded random numbers
-// seedrandom('1', {global:true}); //seed the random value
-// _ = lodash.runInContext(); //load with global seed
+import * as lodash from 'lodash';
+import * as seedrandom from 'seedrandom'; // Seeded random numbers.
+seedrandom('1', { global: true }); // Seed the random value.
+_ = lodash.runInContext(); // Load with global seed.
 
 abstract class Agent {
     constructor(public location: Point, public facing: Point = Facing.South) {}

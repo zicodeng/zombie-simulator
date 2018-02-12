@@ -119,9 +119,8 @@ export class City {
 
         _.sampleSize(possiblePlaces, numHumans + 1).forEach((placeObj, idx) => {
             let newAgent;
-            if (idx < numHumans)
-                newAgent = new Human(placeObj.loc); //last person is a zombie!
-            else newAgent = new Zombie(placeObj.loc);
+            if (idx < numHumans) newAgent = new Human(placeObj.loc);
+            else newAgent = new Zombie(placeObj.loc); // Last person is a zombie!
 
             if (placeObj.building) {
                 placeObj.building.addAgent(newAgent);
@@ -139,7 +138,7 @@ export class City {
             this.outside[i] = agent.see(seenAgent);
         }
 
-        // Use a "filter" to remove agents who have left
+        // Use a "filter" to remove agents who have left.
         // The filter() callback has a "side effect" of moving agents.
         this.outside = this.outside.filter(agent => {
             let nextSpot = new Point(
