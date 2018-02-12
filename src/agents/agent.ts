@@ -22,7 +22,7 @@ abstract class Agent {
 
     // Interacts with (modifies) other agent.
     // Returns the modified other (for convenience/transforming).
-    interactWith(target: Agent): Agent {
+    interactWith(target: Agent): Agent | null {
         return target; // No modification (default).
     }
 

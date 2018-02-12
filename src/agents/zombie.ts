@@ -1,6 +1,7 @@
 import Agent from './agent';
 import Human from './human';
 import { Point, Facing } from './../util';
+import { ArmedState } from './human-states';
 
 class Zombie extends Agent {
     private timePursuing = 0;
@@ -34,10 +35,12 @@ class Zombie extends Agent {
         return this;
     }
 
-    // Bites humans!
-    interactWith(target: Agent): Agent {
+    // Bites humans or get killed by armed human!
+    interactWith(target: Agent): Agent | null {
         if (target instanceof Human) {
-            return new Zombie(target.location, target.facing);
+            return target.state instanceof ArmedState
+                ? null
+                : new Zombie(target.location, target.facing);
         }
         return target;
     }

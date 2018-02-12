@@ -186,7 +186,14 @@ export class City {
             let target = this.agentAt(nextSpot);
             if (target) {
                 let idx = this.outside.indexOf(target);
-                this.outside[idx] = agent.interactWith(target);
+                const interactedAgent = agent.interactWith(target);
+                if (interactedAgent) {
+                    // Infect
+                    this.outside[idx] = interactedAgent;
+                } else {
+                    // Remove this dead agent.
+                    this.outside = _.pull(this.outside, agent);
+                }
             }
         }
 
@@ -248,7 +255,17 @@ export class City {
                 let target = this.agentAt(nextSpot);
                 if (target) {
                     let idx = building.population.indexOf(target);
-                    building.population[idx] = agent.interactWith(target);
+                    const interactedAgent = agent.interactWith(target);
+                    if (interactedAgent) {
+                        // Infect
+                        building.population[idx] = interactedAgent;
+                    } else {
+                        // Remove this dead agent.
+                        building.population = _.pull(
+                            building.population,
+                            agent
+                        );
+                    }
                 }
             }
         }

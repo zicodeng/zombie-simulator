@@ -1,11 +1,13 @@
 import Agent from './agent';
 import Zombie from './zombie';
 import { Point, Facing } from './../util';
-import { HumanState, NormalState } from './human-states';
+import { HumanState, NormalState, ArmedState } from './human-states';
 
 class Human extends Agent {
     // Store State object as an instance variable.
-    public state: HumanState = new NormalState(this);
+    public state: HumanState = _.random(0, 100) < 1
+        ? new ArmedState(this) // 1/100 human is armed.
+        : new NormalState(this);
 
     public speed: number = 0; // Chance to move.
 

@@ -112,3 +112,39 @@ export class PanickedState implements HumanState {
         context.fillRect(this.human.location.x, this.human.location.y, 1, 1);
     }
 }
+
+export class ArmedState implements HumanState {
+    constructor(private human: Human) {
+        this.human.speed = 1; // Always move and try to help other survivors.
+    }
+
+    move(facingBlocked: boolean): Point {
+        if (_.random(1.0) > this.human.speed) {
+            // Return original position, don't move.
+            return this.human.location;
+        }
+
+        if (!facingBlocked) {
+            this.human.location.x += this.human.facing.x;
+            this.human.location.y += this.human.facing.y;
+        } else {
+            this.human.facing =
+                Facing.Directions[_.random(0, Facing.Directions.length - 1)];
+        }
+
+        return this.human.location;
+    }
+
+    see(target: Agent | null): Agent {
+        if (_.random(1.0) < 0.5)
+            // Chance to turn anyway.
+            this.human.facing =
+                Facing.Directions[_.random(0, Facing.Directions.length - 1)];
+        return this.human;
+    }
+
+    render(context: CanvasRenderingContext2D) {
+        context.fillStyle = 'blue'; // Yellow
+        context.fillRect(this.human.location.x, this.human.location.y, 1, 1);
+    }
+}
