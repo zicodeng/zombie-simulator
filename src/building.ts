@@ -1,11 +1,16 @@
 import { Point, Facing, Colors, Config } from './util';
 import Agent from './agents/agent';
+import { BuildingStrategy } from './building-strategies';
 
 export class Building {
     private exits: Array<Point> = []; // In global coordinates.
     public population: Agent[] = [];
 
-    constructor(readonly min: Point, readonly max: Point) {
+    constructor(
+        readonly min: Point,
+        readonly max: Point,
+        private strategy?: BuildingStrategy
+    ) {
         let width = this.max.x - this.min.x;
         let height = this.max.y - this.min.y;
 
@@ -27,14 +32,12 @@ export class Building {
         });
     }
 
-    public lookAhead(
-        start: Point,
-        direction: Point,
-        maxDistance = 10
-    ): Agent | null {
+    public lookAhead(start: Point, direction: Point): Agent | null {
         // Linear search for closest agent.
         let closest = null;
+        const maxDistance = this.strategy ? this.strategy.maxDistance : 10;
         let closestDist = maxDistance + 1;
+
         for (let agent of this.population) {
             let loc = agent.location;
             let dx = (loc.x - start.x) * direction.x; // Distance scaled by facing.
@@ -103,7 +106,10 @@ export class Building {
             this.max.x - this.min.x + 1,
             this.max.y - this.min.y + 1
         );
-        context.fillStyle = Colors.building; // Inside floor
+
+        this.strategy
+            ? this.strategy.setBuildingColor(context)
+            : (context.fillStyle = Colors.building); // Inside floor
         context.fillRect(
             this.min.x + 1,
             this.min.y + 1,
