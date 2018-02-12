@@ -36,3 +36,18 @@ export class Facing {
         return Facing.Directions[(_.findIndex(Facing.Directions, dir) + 1) % 4];
     }
 }
+
+export const Colors = {
+    // From mapbox.streets-basic.
+    building: '#d9ccbf',
+    outside: '#ede5c9', //'#dee0c1'
+    wall: '#c8c2ac'
+};
+
+// City creation parameters; can adjust here.
+export const Config = {
+    populationPercentage: 0.05, // 5% density works nicely.
+    blockSize: { min: 15, max: 40 },
+    buildingSize: { min: 10, max: 25 },
+    numberExits: { min: 2, max: 10 }
+};
