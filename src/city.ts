@@ -204,7 +204,10 @@ export class City {
             // Look around.
             for (let i = 0; i < building.population.length; i++) {
                 let agent = building.population[i];
-                let seenAgent = this.lookAhead(agent.location, agent.facing);
+                let seenAgent = building.lookAhead(
+                    agent.location,
+                    agent.facing
+                );
                 building.population[i] = agent.see(seenAgent);
             }
 
