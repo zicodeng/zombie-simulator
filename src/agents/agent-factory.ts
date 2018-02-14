@@ -3,22 +3,20 @@ import Human from './human';
 import Zombie from './zombie';
 import { Point } from '../util';
 
-export enum AgentType {
-    HUMAN = 'Human',
-    ZOMBIE = 'Zombie'
+interface IAgentFactory {
+    createHuman(location: Point): Agent;
+    createZombie(location: Point): Agent;
 }
 
-class AgentFactory {
+class AgentFactory implements IAgentFactory {
     constructor() {}
 
-    createAgent(agentType: AgentType, location: Point): Agent {
-        switch (agentType) {
-            case AgentType.HUMAN:
-                return new Human(location);
+    createHuman(location: Point): Agent {
+        return new Human(location);
+    }
 
-            default:
-                return new Zombie(location);
-        }
+    createZombie(location: Point): Agent {
+        return new Zombie(location);
     }
 }
 
