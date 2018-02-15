@@ -9,7 +9,7 @@ export class Building {
     constructor(
         readonly min: Point,
         readonly max: Point,
-        private strategy?: BuildingStrategy
+        private strategy: BuildingStrategy
     ) {
         let width = this.max.x - this.min.x;
         let height = this.max.y - this.min.y;
@@ -35,7 +35,7 @@ export class Building {
     public lookAhead(start: Point, direction: Point): Agent | null {
         // Linear search for closest agent.
         let closest = null;
-        const maxDistance = this.strategy ? this.strategy.maxDistance : 10;
+        const maxDistance = this.strategy.maxDistance;
         let closestDist = maxDistance + 1;
 
         for (let agent of this.population) {
@@ -67,7 +67,6 @@ export class Building {
 
     // Includes doors (basically: on border).
     public hasWallAt(location: Point): boolean {
-        // console.log('loc:', location, 'min:',this.min, 'max:',this.max);
         let potentialWall =
             location.x === this.min.x ||
             location.x === this.max.x ||
@@ -107,9 +106,8 @@ export class Building {
             this.max.y - this.min.y + 1
         );
 
-        this.strategy
-            ? this.strategy.setBuildingColor(context)
-            : (context.fillStyle = Colors.building); // Inside floor
+        this.strategy.setBuildingColor(context);
+
         context.fillRect(
             this.min.x + 1,
             this.min.y + 1,

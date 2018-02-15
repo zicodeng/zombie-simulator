@@ -9,7 +9,7 @@ import * as lodash from 'lodash';
 
 // This seeds Math.random(), so use original lodash context for non-deterministic random.
 import * as seedrandom from 'seedrandom'; // Seeded random numbers.
-import { NoLightStrategy } from './building-strategies';
+import { NoLightStrategy, LightStrategy } from './building-strategies';
 
 let _ = lodash; //alias that can be modified (for seeding random numbers)
 
@@ -60,7 +60,9 @@ export class City {
                 let building = new Building(
                     new Point(min.x + _.random(1, 2), min.y + _.random(1, 2)), // Min corner.
                     new Point(max.x - _.random(1, 2), max.y - _.random(1, 2)), // Max corner.
-                    _.random(1.0) < 0.3 ? new NoLightStrategy() : undefined
+                    _.random(1.0) < 0.3
+                        ? new NoLightStrategy()
+                        : new LightStrategy()
                 );
                 return [building]; // List of created (single) building.
             } else {
