@@ -1,8 +1,11 @@
-import { Point, Facing, Colors, Config } from './util';
 import Agent from './agents/agent';
-import { BuildingStrategy } from './building-strategies';
+import Area from './area';
 
-export class Building {
+import { Point, Facing, Colors, Config } from './util';
+import { BuildingStrategy } from './building-strategies';
+import { City } from './city';
+
+export class Building extends Area {
     private exits: Array<Point> = []; // In global coordinates.
     public population: Agent[] = [];
 
@@ -11,6 +14,7 @@ export class Building {
         readonly max: Point,
         private strategy: BuildingStrategy
     ) {
+        super();
         let width = this.max.x - this.min.x;
         let height = this.max.y - this.min.y;
 
@@ -30,6 +34,72 @@ export class Building {
             spot++;
             return new Point(this.min.x, this.max.y - spot); // Right wall
         });
+    }
+
+    public moveAll(composite: Area): void {
+        // Look around.
+        for (let i = 0; i < this.population.length; i++) {
+            let agent = this.population[i];
+            let seenAgent = this.lookAhead(agent.location, agent.facing);
+            this.population[i] = agent.see(seenAgent);
+        }
+
+        // Use a "filter" to remove agents who have left
+        // The filter() callback has a "side effect" of moving agents.
+        this.population = this.population.filter(agent => {
+            let nextSpot = new Point(
+                agent.location.x + agent.facing.x,
+                agent.location.y + agent.facing.y
+            );
+
+            // If next spot is outside (not in this area), check outside (other areas).
+            if (!this.contains(nextSpot)) {
+                let otherArea = composite.areaAt(nextSpot);
+                if (otherArea === null) {
+                    if (composite.agentAt(nextSpot) === null) {
+                        composite.addAgent(agent);
+                        return false;
+                    }
+                } else {
+                    // Is another building (complex edge case).
+                    let open =
+                        otherArea.hasDoorAt(nextSpot) &&
+                        otherArea.agentAt(nextSpot) === null;
+                    if (open) {
+                        otherArea.addAgent(agent);
+                        return false;
+                    }
+                }
+                agent.move(true); // Spot is another building, but we're blocked.
+            } else if (this.hasWallAt(nextSpot) && !this.hasDoorAt(nextSpot)) {
+                // Check walls.
+                agent.move(true); // Blocked
+            } else {
+                agent.move(this.agentAt(nextSpot) !== null); // Move if not blocked.
+            }
+
+            return true; // Keep the agent.
+        });
+
+        // Interact with people next to each agent.
+        for (let agent of this.population) {
+            let nextSpot = new Point(
+                agent.location.x + agent.facing.x,
+                agent.location.y + agent.facing.y
+            );
+            let target = this.agentAt(nextSpot);
+            if (target) {
+                let idx = this.population.indexOf(target);
+                const interactedAgent = agent.interactWith(target);
+                if (interactedAgent) {
+                    // Infect
+                    this.population[idx] = interactedAgent;
+                } else {
+                    // Remove this dead agent.
+                    this.population = _.pull(this.population, agent);
+                }
+            }
+        }
     }
 
     public lookAhead(start: Point, direction: Point): Agent | null {
@@ -93,7 +163,7 @@ export class Building {
         return null;
     }
 
-    public addAgent(agent: Agent) {
+    public addAgent(agent: Agent): void {
         this.population.unshift(agent); // Add to front so act first when arriving.
     }
 

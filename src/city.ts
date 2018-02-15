@@ -1,28 +1,31 @@
 import Building from './building';
-import { Point, Facing, Colors, Config } from './util';
+import Area from './area';
 import Agent from './agents/agent';
 import Human from './agents/human';
 import Zombie from './agents/zombie';
 import AgentFactory from './agents/agent-factory';
 
+import { Point, Facing, Colors, Config } from './util';
+import { NoLightStrategy, LightStrategy } from './building-strategies';
+
 import * as lodash from 'lodash';
 
 // This seeds Math.random(), so use original lodash context for non-deterministic random.
 import * as seedrandom from 'seedrandom'; // Seeded random numbers.
-import { NoLightStrategy, LightStrategy } from './building-strategies';
 
 let _ = lodash; //alias that can be modified (for seeding random numbers)
 
 // Holds all the agents.
-export class City {
+export class City extends Area {
     private outside: Agent[] = [];
-    private buildings: Building[] = [];
+    subareas: Area[] = [];
 
     constructor(
         readonly width: number,
         readonly height: number,
         private mapSeed: string | null
     ) {
+        super();
         if (mapSeed) {
             seedrandom(mapSeed, { global: true }); // Seed the random value.
             _ = lodash.runInContext(); // Load with global seed.
@@ -31,7 +34,7 @@ export class City {
         }
 
         // Size accounts for border road.
-        this.buildings = this.makeSubdivision(
+        this.subareas = this.makeSubdivision(
             new Point(1, 1),
             new Point(width - 1, height - 1)
         );
@@ -40,7 +43,7 @@ export class City {
     }
 
     // Recursively divides the area into a block.
-    private makeSubdivision(min: Point, max: Point, iter = -1): Building[] {
+    private makeSubdivision(min: Point, max: Point, iter = -1): Area[] {
         if (iter === 0) {
             return [];
         } // If counted down.
@@ -105,14 +108,14 @@ export class City {
     }
 
     private populate() {
-        let possiblePlaces: { loc: Point; building: Building | null }[] = [];
+        let possiblePlaces: { loc: Point; subarea: Area | null }[] = [];
         let walls = 0;
         for (let i = 0; i < this.width; i++) {
             for (let j = 0; j < this.height; j++) {
                 const loc = new Point(i, j);
-                let building = this.buildingAt(loc);
-                if (building == null || !building.hasWallAt(loc)) {
-                    possiblePlaces.push({ loc: loc, building: building });
+                let subarea = this.areaAt(loc);
+                if (subarea == null || !subarea.hasWallAt(loc)) {
+                    possiblePlaces.push({ loc: loc, subarea: subarea });
                 }
             }
         }
@@ -130,8 +133,8 @@ export class City {
                     ? agentFactory.createHuman(placeObj.loc)
                     : agentFactory.createZombie(placeObj.loc);
 
-            if (placeObj.building) {
-                placeObj.building.addAgent(newAgent);
+            if (placeObj.subarea) {
+                placeObj.subarea.addAgent(newAgent);
             } else {
                 this.outside.push(newAgent);
             }
@@ -143,10 +146,11 @@ export class City {
         for (let i = 0; i < this.outside.length; i++) {
             let agent = this.outside[i];
             let seenAgent = this.lookAhead(agent.location, agent.facing);
+            // Replace old agent with new agent.
             this.outside[i] = agent.see(seenAgent);
         }
 
-        // Use a "filter" to remove agents who have left.
+        // Use a "filter" to remove agents who have left this area and move to other area.
         // The filter() callback has a "side effect" of moving agents.
         this.outside = this.outside.filter(agent => {
             let nextSpot = new Point(
@@ -164,7 +168,7 @@ export class City {
                 agent.move(true); // Blocked by city limits.
             } else {
                 // Check buildings.
-                let building = this.buildingAt(nextSpot);
+                let building = this.areaAt(nextSpot);
                 if (building) {
                     let open =
                         building.hasDoorAt(nextSpot) &&
@@ -203,79 +207,8 @@ export class City {
         }
 
         // Move agents in buildings.
-        for (let building of this.buildings) {
-            // Look around.
-            for (let i = 0; i < building.population.length; i++) {
-                let agent = building.population[i];
-                let seenAgent = building.lookAhead(
-                    agent.location,
-                    agent.facing
-                );
-                building.population[i] = agent.see(seenAgent);
-            }
-
-            // Use a "filter" to remove agents who have left
-            // The filter() callback has a "side effect" of moving agents.
-            building.population = building.population.filter(agent => {
-                let nextSpot = new Point(
-                    agent.location.x + agent.facing.x,
-                    agent.location.y + agent.facing.y
-                );
-
-                // If next spot is outside, check outside.
-                if (!building.contains(nextSpot)) {
-                    let otherBuilding = this.buildingAt(nextSpot);
-                    if (otherBuilding === null) {
-                        if (this.agentAt(nextSpot) === null) {
-                            this.addAgent(agent);
-                            return false;
-                        }
-                    } else {
-                        // Is another building (complex edge case).
-                        let open =
-                            otherBuilding.hasDoorAt(nextSpot) &&
-                            otherBuilding.agentAt(nextSpot) === null;
-                        if (open) {
-                            otherBuilding.addAgent(agent);
-                            return false;
-                        }
-                    }
-                    agent.move(true); // Spot is another building, but we're blocked.
-                } else if (
-                    building.hasWallAt(nextSpot) &&
-                    !building.hasDoorAt(nextSpot)
-                ) {
-                    // Check walls.
-                    agent.move(true); // Blocked
-                } else {
-                    agent.move(this.agentAt(nextSpot) !== null); // Move if not blocked.
-                }
-
-                return true; // Keep the agent.
-            });
-
-            // Interact with people next to each agent.
-            for (let agent of building.population) {
-                let nextSpot = new Point(
-                    agent.location.x + agent.facing.x,
-                    agent.location.y + agent.facing.y
-                );
-                let target = this.agentAt(nextSpot);
-                if (target) {
-                    let idx = building.population.indexOf(target);
-                    const interactedAgent = agent.interactWith(target);
-                    if (interactedAgent) {
-                        // Infect
-                        building.population[idx] = interactedAgent;
-                    } else {
-                        // Remove this dead agent.
-                        building.population = _.pull(
-                            building.population,
-                            agent
-                        );
-                    }
-                }
-            }
+        for (let subarea of this.subareas) {
+            subarea.moveAll(this);
         }
     }
 
@@ -308,8 +241,8 @@ export class City {
                     start.x + direction.x * i,
                     start.y + direction.y * i
                 );
-                for (let building of this.buildings) {
-                    if (building.hasWallAt(nextSpot)) return null; // Can't see anyone because hit wall.
+                for (let subarea of this.subareas) {
+                    if (subarea.hasWallAt(nextSpot)) return null; // Can't see anyone because hit wall.
                 }
             }
         }
@@ -317,10 +250,12 @@ export class City {
         return closest;
     }
 
-    public buildingAt(location: Point): Building | null {
+    // Checks whether a list of areas has a specific location.
+    // If has, return that area.
+    public areaAt(location: Point): Area | null {
         // Linear search; could replace with a stored Map for faster access.
-        for (let building of this.buildings) {
-            if (building.contains(location)) return building;
+        for (let subarea of this.subareas) {
+            if (subarea.contains(location)) return subarea;
         }
         return null;
     }
@@ -345,9 +280,9 @@ export class City {
         context.fillStyle = Colors.outside;
         context.fillRect(0, 0, this.width, this.height); // Clear to default.
 
-        // Draw buildings.
-        for (let building of this.buildings) {
-            building.render(context);
+        // Draw subareas.
+        for (let subarea of this.subareas) {
+            subarea.render(context);
         }
 
         // Draw people
