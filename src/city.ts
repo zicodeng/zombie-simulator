@@ -17,7 +17,7 @@ let _ = lodash; //alias that can be modified (for seeding random numbers)
 
 // Holds all the agents.
 export class City extends Area {
-    private outside: Agent[] = [];
+    population: Agent[] = [];
     subareas: Area[] = [];
 
     constructor(
@@ -67,6 +67,7 @@ export class City extends Area {
                         ? new NoLightStrategy()
                         : new LightStrategy()
                 );
+                building.setComposite(this);
                 return [building]; // List of created (single) building.
             } else {
                 return []; // List of no buildings.
@@ -136,35 +137,22 @@ export class City extends Area {
             if (placeObj.subarea) {
                 placeObj.subarea.addAgent(newAgent);
             } else {
-                this.outside.push(newAgent);
+                this.population.push(newAgent);
             }
         });
     }
 
-    public moveAll() {
-        // Look around.
-        for (let i = 0; i < this.outside.length; i++) {
-            let agent = this.outside[i];
-            let seenAgent = this.lookAhead(agent.location, agent.facing);
-            // Replace old agent with new agent.
-            this.outside[i] = agent.see(seenAgent);
-        }
-
+    public moveAgents() {
         // Use a "filter" to remove agents who have left this area and move to other area.
         // The filter() callback has a "side effect" of moving agents.
-        this.outside = this.outside.filter(agent => {
+        this.population = this.population.filter(agent => {
             let nextSpot = new Point(
                 agent.location.x + agent.facing.x,
                 agent.location.y + agent.facing.y
             );
 
             // Check boundaries.
-            if (
-                nextSpot.x < 0 ||
-                nextSpot.x >= this.width ||
-                nextSpot.y < 0 ||
-                nextSpot.y >= this.height
-            ) {
+            if (this.contains(nextSpot)) {
                 agent.move(true); // Blocked by city limits.
             } else {
                 // Check buildings.
@@ -185,31 +173,6 @@ export class City extends Area {
             }
             return true; // Keep the agent.
         });
-
-        // Interact with whoever is next to the agent.
-        for (let agent of this.outside) {
-            let nextSpot = new Point(
-                agent.location.x + agent.facing.x,
-                agent.location.y + agent.facing.y
-            );
-            let target = this.agentAt(nextSpot);
-            if (target) {
-                let idx = this.outside.indexOf(target);
-                const interactedAgent = agent.interactWith(target);
-                if (interactedAgent) {
-                    // Infect
-                    this.outside[idx] = interactedAgent;
-                } else {
-                    // Remove this dead agent.
-                    this.outside = _.pull(this.outside, agent);
-                }
-            }
-        }
-
-        // Move agents in buildings.
-        for (let subarea of this.subareas) {
-            subarea.moveAll(this);
-        }
     }
 
     public lookAhead(
@@ -220,7 +183,7 @@ export class City extends Area {
         // Linear search for closest agent
         let closest = null;
         let closestDist = maxDistance + 1;
-        for (let agent of this.outside) {
+        for (let agent of this.population) {
             let loc = agent.location;
             let dx = (loc.x - start.x) * direction.x; // Distance scaled by facing.
             let dy = (loc.y - start.y) * direction.y; // Distance scaled by facing.
@@ -260,23 +223,17 @@ export class City extends Area {
         return null;
     }
 
-    public agentAt(location: Point): Agent | null {
-        for (let agent of this.outside) {
-            if (
-                agent.location.x == location.x &&
-                agent.location.y == location.y
-            )
-                return agent;
-        }
-        return null;
-    }
-
-    public addAgent(agent: Agent) {
-        this.outside.unshift(agent); // Add to front so act first when arriving.
+    public contains(location: Point): boolean {
+        return (
+            location.x < 0 ||
+            location.x >= this.width ||
+            location.y < 0 ||
+            location.y >= this.height
+        );
     }
 
     public render(context: CanvasRenderingContext2D) {
-        // Default (outside)
+        // Default (population)
         context.fillStyle = Colors.outside;
         context.fillRect(0, 0, this.width, this.height); // Clear to default.
 
@@ -286,7 +243,7 @@ export class City extends Area {
         }
 
         // Draw people
-        for (let agent of this.outside) {
+        for (let agent of this.population) {
             agent.render(context);
         }
     }

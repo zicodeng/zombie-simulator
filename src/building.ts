@@ -36,14 +36,7 @@ export class Building extends Area {
         });
     }
 
-    public moveAll(composite: Area): void {
-        // Look around.
-        for (let i = 0; i < this.population.length; i++) {
-            let agent = this.population[i];
-            let seenAgent = this.lookAhead(agent.location, agent.facing);
-            this.population[i] = agent.see(seenAgent);
-        }
-
+    moveAgents(): void {
         // Use a "filter" to remove agents who have left
         // The filter() callback has a "side effect" of moving agents.
         this.population = this.population.filter(agent => {
@@ -54,10 +47,13 @@ export class Building extends Area {
 
             // If next spot is outside (not in this area), check outside (other areas).
             if (!this.contains(nextSpot)) {
-                let otherArea = composite.areaAt(nextSpot);
+                if (!this.composite) {
+                    return;
+                }
+                let otherArea = this.composite.areaAt(nextSpot);
                 if (otherArea === null) {
-                    if (composite.agentAt(nextSpot) === null) {
-                        composite.addAgent(agent);
+                    if (this.composite.agentAt(nextSpot) === null) {
+                        this.composite.addAgent(agent);
                         return false;
                     }
                 } else {
@@ -80,26 +76,6 @@ export class Building extends Area {
 
             return true; // Keep the agent.
         });
-
-        // Interact with people next to each agent.
-        for (let agent of this.population) {
-            let nextSpot = new Point(
-                agent.location.x + agent.facing.x,
-                agent.location.y + agent.facing.y
-            );
-            let target = this.agentAt(nextSpot);
-            if (target) {
-                let idx = this.population.indexOf(target);
-                const interactedAgent = agent.interactWith(target);
-                if (interactedAgent) {
-                    // Infect
-                    this.population[idx] = interactedAgent;
-                } else {
-                    // Remove this dead agent.
-                    this.population = _.pull(this.population, agent);
-                }
-            }
-        }
     }
 
     public lookAhead(start: Point, direction: Point): Agent | null {
@@ -150,21 +126,6 @@ export class Building extends Area {
             if (exit.x === location.x && exit.y === location.y) return true;
         }
         return false;
-    }
-
-    public agentAt(location: Point): Agent | null {
-        for (let agent of this.population) {
-            if (
-                agent.location.x == location.x &&
-                agent.location.y == location.y
-            )
-                return agent;
-        }
-        return null;
-    }
-
-    public addAgent(agent: Agent): void {
-        this.population.unshift(agent); // Add to front so act first when arriving.
     }
 
     public render(context: CanvasRenderingContext2D) {
